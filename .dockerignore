@@ -1,0 +1,7 @@
+.*
+obj
+bin
+Dockerfile
+build.sh
+*.txt
+*.yaml
