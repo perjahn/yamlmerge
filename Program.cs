@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 class TreeNode
 {
@@ -78,7 +79,7 @@ class Program
         List<string> outrows = [];
         FlattenTree(outroot, outrows);
 
-        return [.. outrows];
+        return [.. outrows.Skip(1)];
     }
 
     static void ParseRows(TreeNode root, string[] rows)
