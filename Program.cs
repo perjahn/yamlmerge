@@ -64,12 +64,11 @@ class Program
 
         foreach (var rows in inrows)
         {
-            var inroot = new TreeNode();
-            ParseRows(inroot, rows);
+            var inroot = ParseRows(rows);
             trees.Add(inroot);
         }
 
-        var outroot = new TreeNode();
+        TreeNode outroot = new();
 
         foreach (var tree in trees)
         {
@@ -82,37 +81,59 @@ class Program
         return [.. outrows.Skip(1)];
     }
 
-    static void ParseRows(TreeNode root, string[] rows)
+    static TreeNode ParseRows(string[] rows)
     {
+        TreeNode root = new();
         List<TreeNode> parsedNodes = [];
 
-        for (var i = 0; i < rows.Length; i++)
+        foreach (var row in rows)
         {
-            var indent = LeadingSpaces(rows[i]);
-            TreeNode node = new() { Row = rows[i] };
+            if (row.Trim().Length == 0)
+            {
+                continue;
+            }
+
+            var indent = LeadingSpaces(row);
 
             TreeNode? parent = null;
-            for (var j = i - 1; j >= 0; j--)
+            for (var j = parsedNodes.Count - 1; j >= 0; j--)
             {
-                var prevIndent = LeadingSpaces(rows[j]);
-                if (prevIndent < indent ||
-                    (prevIndent == indent && rows[i].TrimStart().StartsWith('-') && !rows[j].TrimStart().StartsWith('-')))
+                var prevIndent = LeadingSpaces(parsedNodes[j].Row);
+                if (prevIndent < indent || (prevIndent == indent && row.TrimStart().StartsWith('-') && !parsedNodes[j].Row.TrimStart().StartsWith('-')))
                 {
                     parent = parsedNodes[j];
-                    //Console.WriteLine($"{i} {j}: '{rows[i]}' '{rows[j]}'");
                     break;
                 }
             }
 
-            parent?.Children.Add(node);
-
             if (parent == null)
             {
+                TreeNode node = new() { Row = row };
                 root.Children.Add(node);
+                parsedNodes.Add(node);
             }
+            else
+            {
+                if (row.TrimStart().StartsWith('-'))
+                {
+                    TreeNode node = new() { Row = row[..(indent + 1)] };
+                    parent.Children.Add(node);
+                    parsedNodes.Add(node);
 
-            parsedNodes.Add(node);
+                    TreeNode n2 = new() { Row = $"{row[0..indent]} {row[(indent + 1)..]}" };
+                    node.Children.Add(n2);
+                    parsedNodes.Add(n2);
+                }
+                else
+                {
+                    TreeNode node = new() { Row = row };
+                    parent.Children.Add(node);
+                    parsedNodes.Add(node);
+                }
+            }
         }
+
+        return root;
     }
 
     static int LeadingSpaces(string row)
@@ -136,7 +157,8 @@ class Program
     {
         foreach (var sourceChild in source.Children)
         {
-            var targetChild = target.Children.Find(n => n.Row == sourceChild.Row);
+            var key = GetKey(sourceChild.Row);
+            var targetChild = target.Children.Find(n => GetKey(n.Row) == key);
             if (targetChild == null)
             {
                 targetChild = new TreeNode
@@ -154,9 +176,22 @@ class Program
         }
     }
 
+    static string GetKey(string row)
+    {
+        var index = row.IndexOf(':');
+        return index < 0 ? row : row[..index].Trim();
+    }
+
     static void FlattenTree(TreeNode node, List<string> rows)
     {
-        rows.Add(node.Row);
+        if (node.Row.Trim() == "-" && node.Children.Count >= 1 && node.Children[0].Row.StartsWith("  "))
+        {
+            node.Children[0].Row = $"{node.Row} {node.Children[0].Row.TrimStart()}";
+        }
+        else
+        {
+            rows.Add(node.Row);
+        }
 
         foreach (var child in node.Children)
         {
